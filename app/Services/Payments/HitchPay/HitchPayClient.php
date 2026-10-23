@@ -65,10 +65,10 @@ class HitchPayClient
     }
 
     /**
-     * Enrolls a customer with HitchPay. Their docs confirm enrolling
-     * the same customerid/email twice returns the existing record
-     * rather than erroring — so this is safe to call again for a
-     * customer who's already enrolled.
+     * Enrolls a customer with HitchPay. NOT safe to repeat: the sandbox
+     * answers a second enrollment for the same email/phone with
+     * 400 DUPLICATE_REQUEST (seen 2026-09-09), so callers must store the
+     * returned uuid (customers.hitchpay_customer_uuid) and not re-enroll.
      */
     public function enrollCustomer(array $data): array
     {

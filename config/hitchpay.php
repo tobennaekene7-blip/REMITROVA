@@ -10,4 +10,10 @@ return [
     'client_id' => env('HITCHPAY_CLIENT_ID'),
     'client_secret' => env('HITCHPAY_CLIENT_SECRET'),
 
+    // Sandbox only: uuid of the already-enrolled test customer
+    // (test@remitrova.com). Lets a freshly created database reuse the
+    // existing HitchPay sandbox customer instead of hitting
+    // DUPLICATE_REQUEST on re-enrollment. Used by /dev/seed-test-customer.
+    'test_customer_uuid' => env('HITCHPAY_TEST_CUSTOMER_UUID'),
+
 ];

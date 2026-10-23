@@ -41,35 +41,52 @@ class HitchPayProvider implements PersistentAccountProviderInterface
             );
         }
 
-        [$firstName, $lastName] = $this->splitName($customer->name);
-
-        try {
-            $enrollResponse = $this->client->enrollCustomer([
-                'customerid' => 'RR-' . $customer->id,
-                'email' => $customer->email,
-                'phone' => $customer->phone,
-                'firstname' => $firstName,
-                'lastname' => $lastName,
-                'dob' => $customer->date_of_birth->format('d-m-Y'),
-                'nationality' => $customer->nationality,
-                'image' => $customer->profile_image_url,
-                'address' => [
-                    'house_no' => (int) $customer->address_house_no,
-                    'street' => $customer->address_street,
-                    'city' => $customer->address_city,
-                    'state' => $customer->address_state,
-                    'postal_code' => $customer->address_postal_code,
-                    'country' => $customer->country, // already PL/NG — our enum matches ISO 3166-1 alpha-2 directly
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            throw new ProviderRequestFailedException('hitchpay', 'Enrollment failed: ' . $e->getMessage());
-        }
-
-        $customerUuid = $enrollResponse['data']['uuid'] ?? null;
+        // HitchPay rejects a second enrollment for the same email/phone
+        // with 400 DUPLICATE_REQUEST (observed in the sandbox), so once a
+        // customer is enrolled we keep HitchPay's uuid and reuse it.
+        $customerUuid = $customer->hitchpay_customer_uuid;
 
         if (!$customerUuid) {
-            throw new ProviderRequestFailedException('hitchpay', 'Enrollment succeeded but response did not include a uuid.', ['raw_response' => $enrollResponse]);
+            [$firstName, $lastName] = $this->splitName($customer->name);
+
+            try {
+                $enrollResponse = $this->client->enrollCustomer([
+                    'customerid' => 'RR-' . $customer->id,
+                    'email' => $customer->email,
+                    'phone' => $customer->phone,
+                    'firstname' => $firstName,
+                    'lastname' => $lastName,
+                    'dob' => $customer->date_of_birth->format('d-m-Y'),
+                    'nationality' => $customer->nationality,
+                    'image' => $customer->profile_image_url,
+                    'address' => [
+                        'house_no' => (int) $customer->address_house_no,
+                        'street' => $customer->address_street,
+                        'city' => $customer->address_city,
+                        'state' => $customer->address_state,
+                        'postal_code' => $customer->address_postal_code,
+                        'country' => $customer->country, // already PL/NG — our enum matches ISO 3166-1 alpha-2 directly
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                $message = 'Enrollment failed: ' . $e->getMessage();
+
+                if (str_contains($e->getMessage(), 'DUPLICATE_REQUEST')) {
+                    $message .= ' — this customer already exists on HitchPay but we have no stored uuid for them '
+                        . '(e.g. the database was recreated). Set HITCHPAY_TEST_CUSTOMER_UUID for the sandbox test '
+                        . 'customer, or look the uuid up in the HitchPay dashboard.';
+                }
+
+                throw new ProviderRequestFailedException('hitchpay', $message);
+            }
+
+            $customerUuid = $enrollResponse['data']['uuid'] ?? null;
+
+            if (!$customerUuid) {
+                throw new ProviderRequestFailedException('hitchpay', 'Enrollment succeeded but response did not include a uuid.', ['raw_response' => $enrollResponse]);
+            }
+
+            $customer->forceFill(['hitchpay_customer_uuid' => $customerUuid])->save();
         }
 
         try {

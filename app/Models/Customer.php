@@ -18,6 +18,7 @@ class Customer extends Authenticatable
         'date_of_birth', 'nationality', 'profile_image_url',
         'address_house_no', 'address_street', 'address_city',
         'address_state', 'address_postal_code',
+        'hitchpay_customer_uuid',
     ];
 
     protected $hidden = ['password', 'remember_token'];

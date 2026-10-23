@@ -1,7 +1,7 @@
 # Nixpacks config for RemitRova (Laravel) on Railway.
 # Forces a PHP build - prevents any Node/Express misdetection.
 #
-# IMPORTANT: app setup (config:cache, migrate) runs in [start] (runtime),
+# IMPORTANT: app setup (migrate) runs at container start (start.sh),
 # NOT in build - Railway only injects DB/REDIS/APP_KEY vars at runtime,
 # so caching config at build would bake in empty values and crash boot.
 
@@ -19,11 +19,8 @@ nixPkgs = [
 cmds = ["composer install --no-interaction --optimize-autoloader --no-dev"]
 
 [start]
-# Migrate first, and do NOT tolerate failure: if migrations fail the
-# container must die (&&) so the deploy is visibly broken instead of
-# the app booting with a missing schema and serving 500s on every
-# request that touches the missing tables.
-# Then serve on $PORT in the FOREGROUND — this is what keeps the
-# container alive. No config/route/view caching: those can fail on
+# start.sh: migrate first (container dies if that fails), start a
+# supervised queue worker in the background, then serve on $PORT in the
+# foreground. No config/route/view caching: those can fail on
 # closure-based routes (web.php uses a closure) and crash the boot.
-cmd = "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"
+cmd = "bash start.sh"

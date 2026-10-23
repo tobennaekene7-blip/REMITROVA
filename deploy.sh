@@ -12,7 +12,7 @@ set -e
 
 REPO_URL="https://github.com/digitalweboracles/REMITROVA.git"
 BRANCH="main"
-COMMIT_MSG="${1:-Update from Claude — $(date +%Y-%m-%d)}"
+COMMIT_MSG="${1:-Update — $(date +%Y-%m-%d)}"
 SOURCE_DIR="$(pwd)"
 CLONE_DIR="$HOME/Downloads/remitrova-deploy-$(date +%s)"
 

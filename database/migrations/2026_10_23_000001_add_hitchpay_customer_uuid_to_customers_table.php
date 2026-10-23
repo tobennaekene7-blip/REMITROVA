@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Stores HitchPay's own customer uuid once a customer is enrolled.
+ * HitchPay rejects a second enrollment for the same email/phone with
+ * DUPLICATE_REQUEST, so we must remember the uuid and reuse it for
+ * every later generate-account call instead of re-enrolling.
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('customers', function (Blueprint $table) {
+            $table->string('hitchpay_customer_uuid', 64)->nullable()->after('address_postal_code');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('customers', function (Blueprint $table) {
+            $table->dropColumn('hitchpay_customer_uuid');
+        });
+    }
+};

@@ -31,6 +31,34 @@ this has actually been executed yet. What I *did* do:
 **What genuinely needs your hands, and can't be verified any other
 way:** every step below. This has never been run.
 
+## Deploying on Railway (current setup)
+
+1. New Railway project -> **Deploy from GitHub repo** -> pick this repo.
+   Nixpacks reads `nixpacks.toml` (PHP 8.2) and `start.sh` runs
+   migrations, a queue worker, and the web server.
+2. Add a **MySQL** service and a **Redis** service to the same project.
+3. On the app service, set Variables (see `.env.example` for the full
+   list and the `${{MySQL.*}}` / `${{Redis.*}}` references):
+   - `APP_KEY` (run `php artisan key:generate --show` locally),
+     `APP_ENV=production`, `APP_DEBUG=false`
+   - `APP_URL` = the **https** public URL Railway gives the service
+     (generate a domain under Settings -> Networking first). This is the
+     base of the webhook callbackUrl sent to Paga.
+   - `DB_*`, `REDIS_*`, `QUEUE_CONNECTION=redis`, `SESSION_DRIVER=redis`,
+     `CACHE_STORE=redis`
+   - `PAGA_COLLECT_BASE_URL`, `PAGA_PRINCIPAL`, `PAGA_SECRET_KEY`,
+     `PAGA_HASH_KEY`, `PAGA_BUSINESS_BASE_URL`
+   - `HITCHPAY_BASE_URL`, `HITCHPAY_CLIENT_ID`, `HITCHPAY_CLIENT_SECRET`,
+     `HITCHPAY_TEST_CUSTOMER_UUID` (sandbox)
+   - `DEV_SEED_KEY` = a new random string (temporary; protects `/dev/*`)
+4. Deploy. Health check: `GET /up`.
+5. Test: `/dev/seed-test-customer?key=...` then
+   `/dev/provision-nuban/{customer_id}?key=...`.
+6. Give Paga the webhook URL: `https://<your-domain>/api/webhooks/paga/persistent-account`
+   and make sure Paga/HitchPay have your new outbound/callback details.
+
+Remove the `/dev/*` routes and `DEV_SEED_KEY` before going live.
+
 ## Step-by-step: getting this running on your DigitalOcean droplet
 
 ### 1. Provision the droplet
